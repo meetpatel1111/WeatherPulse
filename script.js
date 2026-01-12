@@ -1,4 +1,474 @@
 // WeatherPulse Pro - Advanced Weather Intelligence
+class WeatherAnimations {
+    constructor() {
+        this.container = document.getElementById('weather-animation');
+        this.animations = {
+            clear: this.createClearWeather.bind(this),
+            clouds: this.createClouds.bind(this),
+            rain: this.createRain.bind(this),
+            thunderstorm: this.createThunderstorm.bind(this),
+            snow: this.createSnow.bind(this),
+            mist: this.createMist.bind(this),
+            default: this.createDefault.bind(this)
+        };
+        this.currentAnimation = null;
+        this.currentIntensity = 1.0; // Default intensity
+        this.isDaytime = true; // Track day/night state
+        this.transitioning = false; // Track transition state
+        this.windSpeed = 0; // Wind speed for particle effects
+        
+        // Initialize day/night cycle
+        this.updateDayNightCycle();
+        setInterval(this.updateDayNightCycle.bind(this), 60000); // Update every minute
+    }
+    
+    // Update day/night cycle based on current time
+    updateDayNightCycle() {
+        const hour = new Date().getHours();
+        this.isDaytime = hour >= 6 && hour < 18; // 6 AM to 6 PM is day
+        if (this.container) {
+            this.container.classList.toggle('day', this.isDaytime);
+            this.container.classList.toggle('night', !this.isDaytime);
+            
+            // Update existing animations if any
+            if (this.currentAnimation) {
+                const currentWeather = this.currentAnimation;
+                this.currentAnimation = null; // Reset to force re-application
+                this.setWeather(currentWeather, this.currentIntensity);
+            }
+        }
+    }
+
+    // Clear all current animations
+    clearAnimations() {
+        while (this.container.firstChild) {
+            this.container.removeChild(this.container.firstChild);
+        }
+        this.container.className = '';
+    }
+
+    // Set weather animation based on weather condition
+    setWeather(weatherCondition, intensity = 1.0) {
+        if (this.transitioning) return; // Prevent multiple transitions
+        this.currentIntensity = Math.max(0.1, Math.min(2.0, intensity)); // Clamp between 0.1 and 2.0
+        
+        // Map weather conditions to our animation types and intensity
+        const weatherMap = {
+            // Clear
+            'clear': { type: 'clear', intensity: 1.0 },
+            'sunny': { type: 'clear', intensity: 1.2 },
+            
+            // Clouds
+            'partly-cloudy': { type: 'clouds', intensity: 0.5 },
+            'cloudy': { type: 'clouds', intensity: 0.8 },
+            'overcast': { type: 'clouds', intensity: 1.2 },
+            'fog': { type: 'clouds', intensity: 1.0 },
+            
+            // Rain
+            'drizzle': { type: 'rain', intensity: 0.3 },
+            'rain': { type: 'rain', intensity: 0.7 },
+            'light rain': { type: 'rain', intensity: 0.5 },
+            'moderate rain': { type: 'rain', intensity: 1.0 },
+            'heavy rain': { type: 'rain', intensity: 1.5 },
+            
+            // Thunderstorm
+            'thunderstorm': { type: 'thunderstorm', intensity: 1.5 },
+            'thunderstorm with light rain': { type: 'thunderstorm', intensity: 1.2 },
+            'thunderstorm with rain': { type: 'thunderstorm', intensity: 1.5 },
+            'thunderstorm with heavy rain': { type: 'thunderstorm', intensity: 2.0 },
+            
+            // Snow
+            'snow': { type: 'snow', intensity: 0.7 },
+            'light snow': { type: 'snow', intensity: 0.5 },
+            'heavy snow': { type: 'snow', intensity: 1.2 },
+            'sleet': { type: 'snow', intensity: 0.8 },
+            
+            // Mist
+            'mist': { type: 'mist', intensity: 0.7 },
+            'haze': { type: 'mist', intensity: 0.5 },
+            'fog': { type: 'mist', intensity: 0.9 },
+            'smoke': { type: 'mist', intensity: 1.0 },
+            'dust': { type: 'mist', intensity: 0.8 },
+            'sand': { type: 'mist', intensity: 1.1 },
+            'ash': { type: 'mist', intensity: 1.2 },
+            'squall': { type: 'mist', intensity: 1.3 },
+            'tornado': { type: 'mist', intensity: 1.5 }
+        };
+
+        const { type: animationType, intensity: typeIntensity } = 
+            weatherMap[weatherCondition.toLowerCase()] || { type: 'default', intensity: 1.0 };
+            
+        // Calculate final intensity
+        const finalIntensity = this.currentIntensity * typeIntensity;
+        
+        // Start transition
+        this.transitioning = true;
+        this.container.style.transition = 'opacity 1s ease-in-out';
+        this.container.style.opacity = '0.3';
+        
+        // Clear current animations after fade out
+        setTimeout(() => {
+            this.clearAnimations();
+            this.currentAnimation = animationType;
+            this.container.className = `weather-${animationType} ${this.isDaytime ? 'day' : 'night'}`;
+            
+            if (this.animations[animationType]) {
+                this.animations[animationType](finalIntensity);
+            }
+            
+            // Fade back in
+            setTimeout(() => {
+                this.container.style.opacity = '0.7';
+                this.transitioning = false;
+            }, 50);
+        }, 300);
+    }
+
+    // Create clear weather animation (sun/moon)
+    createClearWeather(intensity = 1.0) {
+        const isDay = this.isDaytime;
+        const sun = document.createElement('div');
+        sun.className = isDay ? 'sun' : 'moon';
+        
+        // Adjust size based on intensity
+        const size = 100 + (50 * intensity);
+        sun.style.width = `${size}px`;
+        sun.style.height = `${size}px`;
+        
+        // Position based on time of day
+        const hour = new Date().getHours();
+        const dayProgress = ((hour - 6) % 24) / 12; // 0 at 6 AM, 1 at 6 PM
+        const angle = Math.PI * dayProgress;
+        const radius = 30; // Percentage from center
+        
+        const x = 50 + Math.sin(angle) * radius;
+        const y = 50 + Math.cos(angle) * -radius;
+        
+        sun.style.top = `${y}%`;
+        sun.style.left = `${x}%`;
+        
+        // Add glow effect
+        const glow = document.createElement('div');
+        glow.className = isDay ? 'sun-glow' : 'moon-glow';
+        glow.style.width = `${size * 2}px`;
+        glow.style.height = `${size * 2}px`;
+        glow.style.top = `-${size * 0.5}px`;
+        glow.style.left = `-${size * 0.5}px`;
+        
+        sun.appendChild(glow);
+        this.container.appendChild(sun);
+        
+        // Add some subtle particles (stars at night, dust particles during day)
+        const particleCount = isDay ? Math.floor(10 * intensity) : Math.floor(50 * (1.5 - intensity));
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = isDay ? 'dust-particle' : 'star';
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.top = `${Math.random() * 100}%`;
+            particle.style.opacity = Math.random() * 0.5 + 0.2;
+            particle.style.animationDuration = `${5 + Math.random() * 10}s`;
+            particle.style.animationDelay = `${Math.random() * 5}s`;
+            this.container.appendChild(particle);
+        }
+    }
+
+    // Create clouds animation
+    createClouds(intensity = 1.0) {
+        // Adjust number of clouds based on intensity
+        const cloudCount = 3 + Math.floor(5 * intensity);
+        const cloudLayers = [
+            { scale: 1.0, speed: 0.2, opacity: 0.3, yRange: [5, 40] },  // Far background clouds
+            { scale: 1.2, speed: 0.5, opacity: 0.5, yRange: [10, 60] }, // Mid background clouds
+            { scale: 1.5, speed: 0.8, opacity: 0.7, yRange: [20, 80] }  // Foreground clouds
+        ];
+        
+        // Create clouds in different layers for parallax effect
+        cloudLayers.forEach((layer, layerIndex) => {
+            const layerClouds = Math.ceil(cloudCount * (0.5 + layerIndex * 0.3));
+            
+            for (let i = 0; i < layerClouds; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                
+                // Randomize cloud appearance
+                const size = (80 + Math.random() * 120) * layer.scale;
+                const yPos = layer.yRange[0] + Math.random() * (layer.yRange[1] - layer.yRange[0]);
+                const speed = (0.5 + Math.random() * 0.5) * layer.speed;
+                const opacity = (0.3 + Math.random() * 0.7) * layer.opacity * Math.min(1, intensity * 1.5);
+                
+                // Apply styles
+                cloud.style.width = `${size}px`;
+                cloud.style.height = `${size * 0.6}px`;
+                cloud.style.top = `${yPos}%`;
+                cloud.style.left = `${-size + (Math.random() * 120)}%`; // Start some clouds off-screen
+                cloud.style.opacity = opacity;
+                
+                // Animate cloud movement
+                const duration = 50 + Math.random() * 100;
+                cloud.style.animation = `float ${duration}s linear infinite`;
+                cloud.style.animationDelay = `${Math.random() * 20}s`;
+                
+                // Add subtle shadow for depth
+                const shadow = document.createElement('div');
+                shadow.className = 'cloud-shadow';
+                shadow.style.width = `${size * 0.8}px`;
+                shadow.style.height = `${size * 0.8}px`;
+                shadow.style.opacity = opacity * 0.7;
+                
+                cloud.appendChild(shadow);
+                this.container.appendChild(cloud);
+            }
+        });
+        
+        // Add some atmospheric perspective
+        if (intensity > 0.7) {
+            const haze = document.createElement('div');
+            haze.className = 'atmospheric-haze';
+            haze.style.opacity = 0.1 + (intensity * 0.1);
+            this.container.appendChild(haze);
+        }
+    }
+
+    // Create rain animation
+    createRain(intensity = 1.0) {
+        // Adjust number of raindrops based on intensity
+        const dropCount = Math.floor(50 * intensity);
+        const wind = Math.sin(Date.now() * 0.001) * 10; // Simulate wind sway
+        
+        // Create multiple layers of rain for depth
+        const rainLayers = [
+            { count: dropCount * 0.3, speed: 0.8, size: 0.8, opacity: 0.3, wind: wind * 0.5 },
+            { count: dropCount * 0.5, speed: 1.0, size: 1.0, opacity: 0.6, wind: wind * 0.8 },
+            { count: dropCount * 0.2, speed: 1.5, size: 1.2, opacity: 0.9, wind: wind * 1.2 }
+        ];
+        
+        rainLayers.forEach(layer => {
+            for (let i = 0; i < layer.count; i++) {
+                const drop = document.createElement('div');
+                drop.className = 'raindrop weather-particle';
+                
+                // Randomize position and appearance
+                const left = Math.random() * 100;
+                const top = Math.random() * 100;
+                const duration = 0.3 + Math.random() * 0.7;
+                const size = 1 + Math.random() * 2 * layer.size;
+                const opacity = (0.3 + Math.random() * 0.7) * layer.opacity;
+                
+                // Apply styles
+                drop.style.left = `${left}%`;
+                drop.style.top = `${top}%`;
+                drop.style.width = `${size}px`;
+                drop.style.height = `${10 + Math.random() * 20}px`;
+                drop.style.opacity = opacity;
+                drop.style.transform = `rotate(${15 + layer.wind}deg)`;
+                
+                // Animate with random delays and durations
+                drop.style.animation = `rain ${duration}s linear infinite`;
+                drop.style.animationDelay = `${Math.random() * 2}s`;
+                
+                // Add splash effect
+                if (Math.random() > 0.7) {
+                    const splash = document.createElement('div');
+                    splash.className = 'rain-splash';
+                    splash.style.left = '50%';
+                    splash.style.bottom = '0';
+                    splash.style.animation = `splash ${0.3 + Math.random() * 0.3}s ease-out`;
+                    splash.style.animationDelay = `${(top / 100) * duration}s`;
+                    drop.appendChild(splash);
+                }
+                
+                this.container.appendChild(drop);
+            }
+        });
+        
+        // Add rain mist/fog effect for heavy rain
+        if (intensity > 1.0) {
+            const mist = document.createElement('div');
+            mist.className = 'rain-mist';
+            mist.style.opacity = Math.min(0.6, (intensity - 1) * 0.8);
+            this.container.appendChild(mist);
+        }
+    }
+
+    // Create thunderstorm animation
+    createThunderstorm() {
+        this.createRain(); // Reuse rain animation
+        
+        // Add lightning effect
+        const lightning = () => {
+            const flash = document.createElement('div');
+            flash.className = 'weather-particle';
+            flash.style.position = 'fixed';
+            flash.style.top = '0';
+            flash.style.left = '0';
+            flash.style.width = '100%';
+            flash.style.height = '100%';
+            flash.style.background = 'rgba(255, 255, 255, 0.8)';
+            flash.style.zIndex = '0';
+            flash.style.pointerEvents = 'none';
+            flash.style.opacity = '0';
+            flash.style.transition = 'opacity 0.1s';
+            this.container.appendChild(flash);
+            
+            // Random flash
+            setTimeout(() => {
+                flash.style.opacity = '0.9';
+                setTimeout(() => {
+                    flash.style.opacity = '0';
+                    setTimeout(() => {
+                        if (this.container.contains(flash)) {
+                            this.container.removeChild(flash);
+                        }
+                    }, 100);
+                }, 50);
+            }, Math.random() * 10000);
+            
+            // Schedule next lightning
+            setTimeout(() => {
+                if (this.currentAnimation === 'thunderstorm') {
+                    lightning();
+                }
+            }, 10000 + Math.random() * 20000);
+        };
+        
+        // Start lightning
+        setTimeout(lightning, 5000 + Math.random() * 5000);
+    }
+
+    // Create snow animation
+    createSnow(intensity = 1.0) {
+        // Adjust number of snowflakes based on intensity
+        const flakeCount = Math.floor(50 * intensity);
+        const wind = Math.sin(Date.now() * 0.0005) * 5; // Gentle wind effect
+        
+        // Create different types of snowflakes
+        const flakeTypes = [
+            { count: flakeCount * 0.5, size: 2, speed: 3, opacity: 0.7, wind: wind * 0.5 }, // Small, fast flakes
+            { count: flakeCount * 0.3, size: 4, speed: 2, opacity: 0.9, wind: wind * 0.7 }, // Medium flakes
+            { count: flakeCount * 0.2, size: 6, speed: 1, opacity: 1.0, wind: wind * 1.0 }  // Large, slow flakes
+        ];
+        
+        flakeTypes.forEach(type => {
+            for (let i = 0; i < type.count; i++) {
+                const flake = document.createElement('div');
+                flake.className = 'snowflake weather-particle';
+                
+                // Randomize position and appearance
+                const startPos = -10 - (Math.random() * 20);
+                const duration = 5 + Math.random() * 10 * (1 / type.speed);
+                const size = type.size * (0.8 + Math.random() * 0.4);
+                const opacity = (0.3 + Math.random() * 0.7) * type.opacity;
+                const sway = 5 + Math.random() * 10;
+                const swaySpeed = 2 + Math.random() * 3;
+                
+                // Apply styles
+                flake.style.left = `${Math.random() * 100}%`;
+                flake.style.top = `${startPos}%`;
+                flake.style.width = `${size}px`;
+                flake.style.height = `${size}px`;
+                flake.style.opacity = opacity;
+                
+                // Create keyframe animation for natural falling with sway
+                const keyframes = `
+                    @keyframes snowFall-${i} {
+                        0% { 
+                            transform: translateY(0) translateX(0);
+                            opacity: 0;
+                        }
+                        10% { opacity: ${opacity}; }
+                        90% { opacity: ${opacity}; }
+                        100% { 
+                            transform: translateY(100vh) translateX(${type.wind + sway * Math.sin(swaySpeed * Math.PI)}px);
+                            opacity: 0;
+                        }
+                    }
+                `;
+                
+                // Add the keyframes to the document
+                const style = document.createElement('style');
+                style.innerHTML = keyframes;
+                document.head.appendChild(style);
+                
+                // Apply the animation
+                flake.style.animation = `snowFall-${i} ${duration}s linear infinite`;
+                flake.style.animationDelay = `${Math.random() * 5}s`;
+                
+                // Add subtle rotation
+                flake.style.transform = `rotate(${Math.random() * 360}deg)`;
+                
+                this.container.appendChild(flake);
+            }
+        });
+        
+        // Add ground snow accumulation effect
+        if (intensity > 0.8) {
+            const groundSnow = document.createElement('div');
+            groundSnow.className = 'ground-snow';
+            groundSnow.style.height = `${Math.min(15, 5 + (intensity - 0.8) * 50)}%`;
+            this.container.appendChild(groundSnow);
+        }
+    }
+
+    // Create mist/fog animation
+    createMist(intensity = 1.0) {
+        // Create multiple layers of fog for depth
+        const fogLayers = [
+            { count: 3, size: 1.0, speed: 0.2, opacity: 0.1, blur: 15 }, // Distant fog
+            { count: 4, size: 1.5, speed: 0.3, opacity: 0.15, blur: 25 }, // Mid fog
+            { count: 3, size: 2.0, speed: 0.4, opacity: 0.2, blur: 35 }  // Close fog
+        ];
+        
+        fogLayers.forEach(layer => {
+            for (let i = 0; i < layer.count; i++) {
+                const mist = document.createElement('div');
+                mist.className = 'fog-layer';
+                
+                // Randomize size and position
+                const width = (200 + Math.random() * 300) * layer.size;
+                const height = (100 + Math.random() * 150) * layer.size;
+                const top = Math.random() * 100;
+                const left = -100 + Math.random() * 120;
+                const opacity = (Math.random() * 0.5 + 0.5) * layer.opacity * intensity;
+                const duration = (20 + Math.random() * 40) * (1 / layer.speed);
+                
+                // Apply styles
+                mist.style.width = `${width}px`;
+                mist.style.height = `${height}px`;
+                mist.style.top = `${top}%`;
+                mist.style.left = `${left}%`;
+                mist.style.opacity = opacity;
+                mist.style.filter = `blur(${layer.blur}px)`;
+                mist.style.animation = `float ${duration}s ease-in-out infinite`;
+                mist.style.animationDelay = `${Math.random() * 20}s`;
+                
+                // Add subtle gradient for more realistic fog
+                const gradient = document.createElement('div');
+                gradient.className = 'fog-gradient';
+                gradient.style.background = 'radial-gradient(ellipse at center, rgba(255,255,255,0.1) 0%,rgba(255,255,255,0) 70%)';
+                gradient.style.width = '100%';
+                gradient.style.height = '100%';
+                gradient.style.borderRadius = '50%';
+                
+                mist.appendChild(gradient);
+                this.container.appendChild(mist);
+            }
+        });
+        
+        // Add subtle light scattering effect
+        if (intensity > 0.7 && this.isDaytime) {
+            const godRays = document.createElement('div');
+            godRays.className = 'god-rays';
+            godRays.style.opacity = Math.min(0.5, (intensity - 0.7) * 2);
+            this.container.appendChild(godRays);
+        }
+    }
+
+    // Default animation (when no specific weather is matched)
+    createDefault() {
+        this.container.style.background = 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
+    }
+}
+
 class WeatherDashboard {
     constructor() {
         this.baseUrl = 'https://api.open-meteo.com/v1';
@@ -14,10 +484,39 @@ class WeatherDashboard {
         this.favorites = JSON.parse(localStorage.getItem('weatherFavorites')) || [];
         this.recentSearches = JSON.parse(localStorage.getItem('recentSearches')) || [];
         
+        // Enhanced Caching System
+        this.cache = new Map();
+        this.maxCacheSize = 100; // Maximum number of cache entries
+        this.cacheTimeouts = {
+            weather: 5 * 60 * 1000,      // 5 minutes for current weather
+            forecast: 30 * 60 * 1000,    // 30 minutes for forecasts
+            geocoding: 24 * 60 * 60 * 1000, // 24 hours for location data
+            suggestions: 60 * 60 * 1000    // 1 hour for search suggestions
+        };
+        this.searchDebounceTimer = null;
+        
+        // Auto-refresh properties
+        this.autoRefreshInterval = null;
+        this.autoRefreshEnabled = false;
+        this.autoRefreshRate = 5; // Default to 5 minutes
+        this.lastUpdated = null;
+        
+        // Initialize cache from localStorage
+        this.initCache();
+        
         this.initializeElements();
         this.bindEvents();
         this.loadDefaultLocation();
         this.loadFavorites();
+        this.setupAutoRefreshControls();
+        
+        // Initialize weather animations
+        this.weatherAnimations = new WeatherAnimations();
+        
+        // Start auto-refresh if enabled
+        if (this.autoRefreshEnabled) {
+            this.startAutoRefresh();
+        }
     }
 
     initializeElements() {
@@ -25,8 +524,14 @@ class WeatherDashboard {
         this.citySearch = document.getElementById('citySearch');
         this.searchBtn = document.getElementById('searchBtn');
         this.locationBtn = document.getElementById('locationBtn');
+        this.refreshBtn = document.getElementById('refreshBtn');
         this.favoritesBtn = document.getElementById('favoritesBtn');
         this.settingsBtn = document.getElementById('settingsBtn');
+        
+        // Search suggestions
+        this.searchSuggestions = document.createElement('div');
+        this.searchSuggestions.className = 'search-suggestions hidden';
+        this.citySearch.parentNode.appendChild(this.searchSuggestions);
         
         // Forecast controls
         this.forecastDays = document.getElementById('forecastDays');
@@ -199,11 +704,22 @@ class WeatherDashboard {
     }
 
     bindEvents() {
+        // Search events with debouncing
         this.searchBtn.addEventListener('click', () => this.searchCity());
+        this.citySearch.addEventListener('input', (e) => this.handleSearchInput(e));
+        this.citySearch.addEventListener('focus', () => {
+            if (this.citySearch.value.trim() === '') {
+                this.displayRecentSearches();
+            }
+        });
         this.citySearch.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.searchCity();
+            if (e.key === 'Enter') {
+                this.hideSearchSuggestions();
+                this.searchCity();
+            }
         });
         this.locationBtn.addEventListener('click', () => this.getCurrentLocation());
+        this.refreshBtn.addEventListener('click', () => this.refreshWeatherData());
         this.favoritesBtn.addEventListener('click', () => this.toggleFavorites());
         this.settingsBtn.addEventListener('click', () => this.openSettings());
         this.unitToggle.addEventListener('click', () => this.toggleUnits());
@@ -266,19 +782,20 @@ class WeatherDashboard {
     }
 
     async loadDefaultLocation() {
-        // Try to get user's location, otherwise load a default city
+        // Try to get user's location, otherwise load Pune as default city
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     this.getWeatherByCoords(position.coords.latitude, position.coords.longitude);
                 },
                 (error) => {
-                    // Fallback to a default city
-                    this.getWeatherByCity('London');
+                    // Fallback to Pune, India as default city
+                    this.getWeatherByCity('Pune');
                 }
             );
         } else {
-            this.getWeatherByCity('London');
+            // If geolocation is not supported, load Pune, India
+            this.getWeatherByCity('Pune');
         }
     }
 
@@ -311,20 +828,11 @@ class WeatherDashboard {
     async getWeatherByCity(city) {
         this.showLoading();
         try {
-            // First get coordinates for the city
-            const geocodingResponse = await fetch(
-                `${this.geocodingUrl}/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`
-            );
+            // First get coordinates for the city with caching
+            const geocodingUrl = `${this.geocodingUrl}/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
+            const geocodingData = await this.fetchWithCache(geocodingUrl);
             
-            console.log('Geocoding URL:', `${this.geocodingUrl}/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
-            console.log('Geocoding response status:', geocodingResponse.status);
-            
-            if (!geocodingResponse.ok) {
-                console.error('Geocoding failed:', geocodingResponse.status, geocodingResponse.statusText);
-                throw new Error(`Geocoding failed: ${geocodingResponse.status}`);
-            }
-            
-            const geocodingData = await geocodingResponse.json();
+            console.log('Geocoding URL:', geocodingUrl);
             console.log('Geocoding data:', geocodingData);
             
             if (!geocodingData.results || geocodingData.results.length === 0) {
@@ -334,6 +842,9 @@ class WeatherDashboard {
             const location = geocodingData.results[0];
             this.currentCity = location.name;
             this.currentCoords = { lat: location.latitude, lon: location.longitude };
+            
+            // Add to recent searches
+            this.addToRecentSearches(city);
             
             console.log('Getting weather for:', location.latitude, location.longitude, location.name, location.country);
             this.getWeatherByCoords(location.latitude, location.longitude, location.name, location.country, this.currentForecastDays, this.currentWeatherModel);
@@ -377,15 +888,29 @@ class WeatherDashboard {
             // Use provided city/country names or get from reverse geocoding
             if (!cityName || !countryName) {
                 try {
+                    // Use Open-Meteo's geocoding API with coordinates
                     const reverseGeocodingResponse = await fetch(
-                        `${this.geocodingUrl}/reverse?latitude=${lat}&longitude=${lon}&format=json`
+                        `https://geocoding-api.open-meteo.com/v1/search?name=${lat},${lon}&count=1&language=en&format=json`
                     );
+                    
+                    if (!reverseGeocodingResponse.ok) {
+                        throw new Error(`Geocoding API error: ${reverseGeocodingResponse.status}`);
+                    }
+                    
                     const reverseData = await reverseGeocodingResponse.json();
-                    cityName = cityName || reverseData.results?.[0]?.name || 'Unknown Location';
-                    countryName = countryName || reverseData.results?.[0]?.country || '';
+                    
+                    // If no results, use coordinates as fallback
+                    if (!reverseData.results || reverseData.results.length === 0) {
+                        cityName = cityName || `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+                        countryName = countryName || '';
+                    } else {
+                        const location = reverseData.results[0];
+                        cityName = cityName || location.name || `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+                        countryName = countryName || location.country || location.admin1 || '';
+                    }
                 } catch (error) {
-                    console.warn('Reverse geocoding failed:', error);
-                    cityName = cityName || 'Unknown Location';
+                    console.warn('Reverse geocoding failed, using coordinates:', error);
+                    cityName = cityName || `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
                     countryName = countryName || '';
                 }
             }
@@ -405,6 +930,489 @@ class WeatherDashboard {
             console.error('Error in getWeatherByCoords:', error);
             this.showError(`Weather data error: ${error.message}`);
             this.hideLoading();
+        }
+    }
+
+    // Cache Management
+    initCache() {
+        try {
+            const savedCache = localStorage.getItem('weatherCache');
+            if (savedCache) {
+                const parsedCache = JSON.parse(savedCache);
+                // Filter out expired entries during load
+                const now = Date.now();
+                const validCache = parsedCache.filter(([_, value]) => {
+                    const cacheType = this.getCacheType(value.url);
+                    const timeout = this.cacheTimeouts[cacheType];
+                    return now - value.timestamp < timeout;
+                });
+                this.cache = new Map(validCache);
+                console.log(`Loaded ${validCache.length} valid cache entries from storage`);
+            }
+        } catch (e) {
+            console.error('Error initializing cache:', e);
+            this.cache = new Map();
+        }
+    }
+
+    saveCache() {
+        try {
+            const cacheArray = Array.from(this.cache.entries());
+            localStorage.setItem('weatherCache', JSON.stringify(cacheArray));
+        } catch (e) {
+            console.error('Error saving cache:', e);
+            // If we're running out of space, clear old entries
+            if (e.name === 'QuotaExceededError') {
+                this.clearOldCacheEntries(0.5); // Clear 50% of oldest entries
+            }
+        }
+    }
+
+    clearOldCacheEntries(percentage = 0.5) {
+        const entries = Array.from(this.cache.entries())
+            .sort((a, b) => a[1].timestamp - b[1].timestamp);
+        
+        const entriesToRemove = Math.floor(entries.length * percentage);
+        for (let i = 0; i < entriesToRemove; i++) {
+            this.cache.delete(entries[i][0]);
+        }
+        this.saveCache();
+    }
+
+    // API Caching Methods - Weather-appropriate
+    getCacheKey(url) {
+        // Remove any API keys or sensitive info from URL before using as key
+        return url.split('?')[0];
+    }
+
+    getCacheType(url) {
+        if (url.includes('/forecast')) return 'weather';
+        if (url.includes('/search')) return 'geocoding';
+        if (url.includes('suggestions_')) return 'suggestions';
+        return 'forecast';
+    }
+
+    getCachedData(url) {
+        try {
+            const cacheKey = this.getCacheKey(url);
+            const cacheType = this.getCacheType(url);
+            const timeout = this.cacheTimeouts[cacheType] || this.cacheTimeouts.forecast;
+            
+            const cached = this.cache.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < timeout) {
+                // Move to end of Map to mark as recently used
+                const value = this.cache.get(cacheKey);
+                this.cache.delete(cacheKey);
+                this.cache.set(cacheKey, value);
+                
+                console.log(`Using cached ${cacheType} data (${Math.round((Date.now() - cached.timestamp) / 1000)}s old)`);
+                return cached.data;
+            } else if (cached) {
+                // Remove expired cache entry
+                this.cache.delete(cacheKey);
+            }
+            return null;
+        } catch (e) {
+            console.error('Error getting cached data:', e);
+            return null;
+        }
+    }
+
+    setCachedData(url, data) {
+        try {
+            const cacheKey = this.getCacheKey(url);
+            
+            // Enforce max cache size (LRU eviction)
+            if (this.cache.size >= this.maxCacheSize) {
+                // Remove the first (oldest) entry
+                const firstKey = this.cache.keys().next().value;
+                this.cache.delete(firstKey);
+            }
+            
+            this.cache.set(cacheKey, {
+                url: url, // Store original URL for reference
+                data: data,
+                timestamp: Date.now(),
+                type: this.getCacheType(url)
+            });
+            
+            // Persist to storage (debounced to prevent excessive writes)
+            if (this.saveCacheTimeout) clearTimeout(this.saveCacheTimeout);
+            this.saveCacheTimeout = setTimeout(() => this.saveCache(), 1000);
+            
+        } catch (e) {
+            console.error('Error setting cache:', e);
+            if (e.name === 'QuotaExceededError') {
+                console.warn('LocalStorage quota exceeded, clearing old cache entries');
+                this.clearOldCacheEntries(0.5);
+                // Retry after clearing space
+                this.setCachedData(url, data);
+            }
+        }
+    }
+
+    // Debounced Search Methods
+    handleSearchInput(event) {
+        const query = event.target.value.trim();
+        
+        // Clear existing timer
+        if (this.searchDebounceTimer) {
+            clearTimeout(this.searchDebounceTimer);
+        }
+        
+        if (query.length < 2) {
+            this.hideSearchSuggestions();
+            return;
+        }
+        
+        // Debounce search suggestions
+        this.searchDebounceTimer = setTimeout(() => {
+            this.showSearchSuggestions(query);
+        }, 300);
+    }
+
+    async showSearchSuggestions(query) {
+        try {
+            const suggestionUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`;
+            
+            // Show loading state
+            this.searchSuggestions.innerHTML = '<div class="suggestion-item"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+            this.searchSuggestions.classList.remove('hidden');
+            
+            const response = await fetch(suggestionUrl);
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const suggestions = data.results || [];
+            
+            if (suggestions.length === 0) {
+                this.searchSuggestions.innerHTML = `
+                    <div class="suggestion-item">
+                        <i class="fas fa-search"></i>
+                        <div>No matching cities found</div>
+                    </div>`;
+                return;
+            }
+            
+            this.displaySearchSuggestions(suggestions);
+        } catch (error) {
+            console.error('Error getting search suggestions:', error);
+            this.searchSuggestions.innerHTML = `
+                <div class="suggestion-item error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>Could not load suggestions</div>
+                </div>`;
+            // Auto-hide after 2 seconds
+            setTimeout(() => this.hideSearchSuggestions(), 2000);
+        }
+    }
+
+    displaySearchSuggestions(suggestions) {
+        const html = suggestions.map(location => {
+            const locationName = [
+                location.name,
+                location.admin1,
+                location.country
+            ].filter(Boolean).join(', ');
+            
+            return `
+                <div class="suggestion-item" 
+                     data-city="${location.name}" 
+                     data-lat="${location.latitude}" 
+                     data-lon="${location.longitude}">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <div>
+                        <strong>${location.name}</strong>
+                        ${location.country ? `<span>${location.country}${location.admin1 ? ', ' + location.admin1 : ''}</span>` : ''}
+                    </div>
+                </div>`;
+        }).join('');
+        
+        this.searchSuggestions.innerHTML = html;
+        this.searchSuggestions.classList.remove('hidden');
+        
+        // Add click handlers
+        this.searchSuggestions.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const cityName = item.dataset.city;
+                const lat = parseFloat(item.dataset.lat);
+                const lon = parseFloat(item.dataset.lon);
+                this.citySearch.value = cityName;
+                this.hideSearchSuggestions();
+                this.getWeatherByCoords(lat, lon, cityName);
+            });
+        });
+    }
+
+    hideSearchSuggestions() {
+        this.searchSuggestions.classList.add('hidden');
+    }
+
+    // Recent Searches Management
+    addToRecentSearches(city) {
+        // Remove if already exists
+        this.recentSearches = this.recentSearches.filter(item => item !== city);
+        // Add to beginning
+        this.recentSearches.unshift(city);
+        // Keep only last 10
+        this.recentSearches = this.recentSearches.slice(0, 10);
+        // Save to localStorage
+        localStorage.setItem('recentSearches', JSON.stringify(this.recentSearches));
+    }
+
+    displayRecentSearches() {
+        if (this.recentSearches.length === 0) return;
+        
+        const html = this.recentSearches.map(city => `
+            <div class="recent-search-item" data-city="${city}">
+                <i class="fas fa-history"></i>
+                <span>${city}</span>
+            </div>
+        `).join('');
+        
+        this.searchSuggestions.innerHTML = `
+            <div class="suggestions-header">
+                <strong>Recent Searches</strong>
+            </div>
+            ${html}
+        `;
+        this.searchSuggestions.classList.remove('hidden');
+        
+        // Add click handlers
+        this.searchSuggestions.querySelectorAll('.recent-search-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const cityName = item.dataset.city;
+                this.citySearch.value = cityName;
+                this.hideSearchSuggestions();
+                this.getWeatherByCity(cityName);
+            });
+        });
+    }
+
+    // Enhanced API calls with caching
+    async fetchWithCache(url) {
+        const cachedData = this.getCachedData(url);
+        if (cachedData) {
+            console.log('Using cached data for:', url);
+            return cachedData;
+        }
+        
+        console.log('Fetching fresh data for:', url);
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`API request failed: ${response.status}`);
+        }
+        const data = await response.json();
+        this.setCachedData(url, data);
+        return data;
+    }
+
+    /**
+     * Clear all weather-related caches for the current location
+     */
+    async clearLocationCache() {
+        if (!this.currentCoords.lat) return;
+
+        const lat = this.currentCoords.lat;
+        const lon = this.currentCoords.lon;
+
+        // Patterns to identify cache keys for the current location
+        const patterns = [
+            `${this.baseUrl}/forecast?latitude=${lat}&longitude=${lon}`,
+            `${this.airQualityUrl}?latitude=${lat}&longitude=${lon}`,
+            `${this.geocodingUrl}/reverse?latitude=${lat}&longitude=${lon}`
+        ];
+
+        // Iterate over the cache and delete matching keys
+        const keysToDelete = [];
+        for (const key of this.cache.keys()) {
+            // Use getCacheKey to ensure we're comparing the base URL part
+            if (patterns.some(pattern => this.getCacheKey(key) === this.getCacheKey(pattern))) {
+                keysToDelete.push(key);
+            }
+        }
+
+        if (keysToDelete.length > 0) {
+            console.log('Clearing cache for keys:', keysToDelete);
+            keysToDelete.forEach(key => this.cache.delete(key));
+            this.saveCache(); // Persist the changes
+        }
+    }
+
+    // Auto-refresh methods
+    setupAutoRefreshControls() {
+        const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+        const refreshInterval = document.getElementById('refreshInterval');
+        const customIntervalContainer = document.getElementById('customIntervalContainer');
+        const customInterval = document.getElementById('customInterval');
+        
+        const savedSettings = localStorage.getItem('weatherAppSettings');
+        if (savedSettings) {
+            try {
+                const settings = JSON.parse(savedSettings);
+                if (settings.autoRefreshEnabled !== undefined) {
+                    this.autoRefreshEnabled = settings.autoRefreshEnabled;
+                    autoRefreshToggle.checked = this.autoRefreshEnabled;
+                    refreshInterval.disabled = !this.autoRefreshEnabled;
+                    if (customInterval) customInterval.disabled = !this.autoRefreshEnabled;
+                }
+                if (settings.autoRefreshRate) {
+                    this.autoRefreshRate = settings.autoRefreshRate;
+                    const rateString = this.autoRefreshRate.toString();
+                    const option = Array.from(refreshInterval.options).find(opt => opt.value === rateString);
+                    if (option) {
+                        refreshInterval.value = rateString;
+                        if (customIntervalContainer) customIntervalContainer.classList.add('hidden');
+                    } else {
+                        refreshInterval.value = 'custom';
+                        if (customInterval) customInterval.value = this.autoRefreshRate;
+                        if (customIntervalContainer) customIntervalContainer.classList.remove('hidden');
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading auto-refresh settings:', e);
+            }
+        }
+
+        if (autoRefreshToggle) {
+            autoRefreshToggle.addEventListener('change', (e) => {
+                this.autoRefreshEnabled = e.target.checked;
+                if (refreshInterval) refreshInterval.disabled = !this.autoRefreshEnabled;
+                if (customInterval) customInterval.disabled = !this.autoRefreshEnabled;
+                
+                if (this.autoRefreshEnabled) {
+                    this.applyAutoRefreshSettings();
+                } else {
+                    this.disableAutoRefresh();
+                }
+                this.saveAutoRefreshSettings();
+            });
+        }
+
+        if (refreshInterval) {
+            refreshInterval.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    if (customIntervalContainer) customIntervalContainer.classList.remove('hidden');
+                    if (customInterval) customInterval.focus();
+                } else {
+                    if (customIntervalContainer) customIntervalContainer.classList.add('hidden');
+                    this.autoRefreshRate = parseInt(e.target.value);
+                    if (this.autoRefreshEnabled) this.applyAutoRefreshSettings();
+                    this.saveAutoRefreshSettings();
+                }
+            });
+        }
+
+        if (customInterval) {
+            customInterval.addEventListener('change', (e) => {
+                const minutes = parseInt(e.target.value);
+                if (minutes >= 1 && minutes <= 1440) {
+                    this.autoRefreshRate = minutes;
+                    if (this.autoRefreshEnabled) this.applyAutoRefreshSettings();
+                    this.saveAutoRefreshSettings();
+                } else {
+                    e.target.value = this.autoRefreshRate;
+                }
+            });
+
+            customInterval.addEventListener('blur', (e) => {
+                const minutes = parseInt(e.target.value) || 5;
+                e.target.value = Math.min(1440, Math.max(1, minutes));
+                this.autoRefreshRate = parseInt(e.target.value);
+                if (this.autoRefreshEnabled) this.applyAutoRefreshSettings();
+                this.saveAutoRefreshSettings();
+            });
+        }
+    }
+
+    applyAutoRefreshSettings() {
+        this.stopAutoRefresh();
+        if (this.autoRefreshEnabled && this.currentCity) {
+            this.startAutoRefresh();
+            this.showNotification(`Auto-refresh enabled (${this.getRefreshIntervalText()})`);
+        }
+    }
+
+    startAutoRefresh() {
+        this.stopAutoRefresh();
+        if (this.autoRefreshEnabled && this.currentCity) {
+            this.autoRefreshInterval = setInterval(() => {
+                if (this.currentCity) this.refreshWeatherData();
+            }, this.autoRefreshRate * 60 * 1000);
+        }
+    }
+
+    stopAutoRefresh() {
+        if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+            this.autoRefreshInterval = null;
+        }
+    }
+
+    disableAutoRefresh() {
+        this.stopAutoRefresh();
+        this.autoRefreshEnabled = false;
+        const toggle = document.getElementById('autoRefreshToggle');
+        if (toggle) toggle.checked = false;
+        this.saveAutoRefreshSettings();
+        this.showNotification('Auto-refresh disabled');
+    }
+
+    saveAutoRefreshSettings() {
+        const settings = JSON.parse(localStorage.getItem('weatherAppSettings') || '{}');
+        settings.autoRefreshEnabled = this.autoRefreshEnabled;
+        settings.autoRefreshRate = this.autoRefreshRate;
+        localStorage.setItem('weatherAppSettings', JSON.stringify(settings));
+    }
+
+    getRefreshIntervalText() {
+        if (this.autoRefreshRate === 1) return '1 minute';
+        if (this.autoRefreshRate < 60) return `${this.autoRefreshRate} minutes`;
+        if (this.autoRefreshRate === 60) return '1 hour';
+        return `${Math.round((this.autoRefreshRate / 60) * 10) / 10} hours`;
+    }
+
+    updateLastUpdated() {
+        this.lastUpdated = new Date();
+        const element = document.getElementById('lastUpdated');
+        if (element) element.textContent = `Last updated: ${this.lastUpdated.toLocaleTimeString()}`;
+        this.saveAutoRefreshSettings();
+    }
+
+    async refreshWeatherData() {
+        if (!this.currentCity || !this.currentCoords.lat) {
+            this.showError('No location to refresh. Please search for a city first.');
+            return;
+        }
+
+        if (this.refreshBtn) this.refreshBtn.classList.add('spinning');
+        
+        try {
+            await this.clearLocationCache();
+            await this.getWeatherByCoords(
+                this.currentCoords.lat,
+                this.currentCoords.lon,
+                this.currentCity,
+                this.currentCountry,
+                this.currentForecastDays,
+                this.currentWeatherModel
+            );
+            await this.getAirQuality(this.currentCoords.lat, this.currentCoords.lon);
+
+            this.updateLastUpdated();
+            
+            if (this.autoRefreshEnabled) {
+                const nextRefresh = new Date();
+                nextRefresh.setMinutes(nextRefresh.getMinutes() + this.autoRefreshRate);
+                this.showNotification(`Next refresh at ${nextRefresh.toLocaleTimeString()}`);
+            }
+        } catch (error) {
+            console.error('Refresh error:', error);
+            this.showError('Failed to refresh weather data. ' + (error.message || ''));
+        } finally {
+            if (this.refreshBtn) this.refreshBtn.classList.remove('spinning');
         }
     }
 
@@ -432,6 +1440,11 @@ class WeatherDashboard {
         const weatherDescription = this.getWeatherDescription(weatherCode);
         this.weatherDescription.textContent = weatherDescription;
         this.updateWeatherIcon(weatherDescription);
+        
+        // Update weather animation based on current conditions
+        if (this.weatherAnimations) {
+            this.weatherAnimations.setWeather(weatherDescription.toLowerCase());
+        }
         
         // Weather details
         this.humidity.textContent = `${data.current.relativehumidity_2m}%`;
@@ -3088,37 +4101,131 @@ class WeatherDashboard {
 
     // Settings functionality
     openSettings() {
-        const modal = document.getElementById('settingsModal');
-        modal.classList.remove('hidden');
-        this.loadSettings();
+        try {
+            console.log('Opening settings...');
+            const modal = document.getElementById('settingsModal');
+            if (!modal) {
+                console.error('Settings modal not found');
+                this.showError('Settings panel could not be loaded');
+                return;
+            }
+            
+            // Debug: Check save button
+            const saveButton = document.getElementById('saveSettings');
+            console.log('Save button in openSettings:', saveButton);
+            
+            if (saveButton) {
+                // Re-attach click handler in case it was lost
+                saveButton.onclick = (e) => {
+                    console.log('Save button clicked (from reattached handler)');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.saveSettings(e);
+                };
+            }
+            
+            // Remove hidden class to show modal
+            modal.classList.remove('hidden');
+            console.log('Modal shown, save button should be visible');
+            
+            // Load settings into the form
+            this.loadSettings();
+            
+            // Initialize auto-refresh toggle state
+            const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+            const refreshInterval = document.getElementById('refreshInterval');
+            const customIntervalContainer = document.getElementById('customIntervalContainer');
+            
+            // Load auto-refresh state from settings
+            const settings = JSON.parse(localStorage.getItem('weatherPulseSettings')) || this.getDefaultSettings();
+            if (autoRefreshToggle) {
+                autoRefreshToggle.checked = settings.autoRefresh || false;
+            }
+            
+            if (refreshInterval) {
+                refreshInterval.disabled = !autoRefreshToggle?.checked;
+                refreshInterval.value = settings.refreshInterval || '5';
+                
+                // Show/hide custom interval input
+                if (refreshInterval.value === 'custom') {
+                    customIntervalContainer?.classList.remove('hidden');
+                } else {
+                    customIntervalContainer?.classList.add('hidden');
+                }
+            }
+            
+            // Set up event listeners
+            autoRefreshToggle?.addEventListener('change', (e) => {
+                if (refreshInterval) {
+                    refreshInterval.disabled = !e.target.checked;
+                }
+            });
+            
+            refreshInterval?.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customIntervalContainer?.classList.remove('hidden');
+                } else {
+                    customIntervalContainer?.classList.add('hidden');
+                }
+            });
+            
+            console.log('Settings modal should be visible now');
+        } catch (error) {
+            console.error('Error in openSettings:', error);
+            this.showError('Failed to open settings');
+        }
     }
 
     closeSettings() {
+        console.log('Closing settings...');
         const modal = document.getElementById('settingsModal');
-        modal.classList.add('hidden');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
     }
 
     loadSettings() {
-        // Load settings from localStorage
-        const settings = JSON.parse(localStorage.getItem('weatherPulseSettings')) || this.getDefaultSettings();
-        
-        // Apply settings to form elements
-        document.getElementById('tempUnit').value = settings.tempUnit;
-        document.getElementById('windUnit').value = settings.windUnit;
-        document.getElementById('pressureUnit').value = settings.pressureUnit;
-        document.getElementById('timeFormat').value = settings.timeFormat;
-        document.getElementById('dateFormat').value = settings.dateFormat;
-        document.getElementById('theme').value = settings.theme;
-        document.getElementById('animations').value = settings.animations;
-        document.getElementById('defaultLocation').value = settings.defaultLocation;
-        document.getElementById('language').value = settings.language;
-        document.getElementById('refreshInterval').value = settings.refreshInterval;
-        
-        document.getElementById('weatherAlerts').checked = settings.weatherAlerts;
-        document.getElementById('dailyForecast').checked = settings.dailyForecast;
-        document.getElementById('severeWeather').checked = settings.severeWeather;
-        document.getElementById('cacheData').checked = settings.cacheData;
-        document.getElementById('shareData').checked = settings.shareData;
+        try {
+            // Load settings from localStorage
+            const settings = JSON.parse(localStorage.getItem('weatherPulseSettings')) || this.getDefaultSettings();
+            
+            // Helper function to safely set value
+            const setValue = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (el.type === 'checkbox') {
+                        el.checked = value;
+                    } else {
+                        el.value = value;
+                    }
+                }
+            };
+            
+            // Apply settings to form elements
+            setValue('tempUnit', settings.tempUnit);
+            setValue('windUnit', settings.windUnit);
+            setValue('pressureUnit', settings.pressureUnit);
+            setValue('timeFormat', settings.timeFormat);
+            setValue('dateFormat', settings.dateFormat);
+            setValue('theme', settings.theme);
+            setValue('animations', settings.animations);
+            setValue('defaultLocation', settings.defaultLocation);
+            setValue('language', settings.language);
+            setValue('refreshInterval', settings.refreshInterval);
+            setValue('weatherAlerts', settings.weatherAlerts);
+            setValue('dailyForecast', settings.dailyForecast);
+            setValue('severeWeather', settings.severeWeather);
+            setValue('cacheData', settings.cacheData);
+            setValue('shareData', settings.shareData);
+            setValue('autoRefreshToggle', settings.autoRefresh);
+            
+            // Handle custom interval
+            if (settings.refreshInterval === 'custom' && settings.customInterval) {
+                setValue('customInterval', settings.customInterval);
+            }
+        } catch (error) {
+            console.error('Error loading settings:', error);
+        }
     }
 
     getDefaultSettings() {
@@ -3141,54 +4248,178 @@ class WeatherDashboard {
         };
     }
 
-    saveSettings() {
-        const settings = {
-            tempUnit: document.getElementById('tempUnit').value,
-            windUnit: document.getElementById('windUnit').value,
-            pressureUnit: document.getElementById('pressureUnit').value,
-            timeFormat: document.getElementById('timeFormat').value,
-            dateFormat: document.getElementById('dateFormat').value,
-            theme: document.getElementById('theme').value,
-            animations: document.getElementById('animations').value,
-            defaultLocation: document.getElementById('defaultLocation').value,
-            language: document.getElementById('language').value,
-            refreshInterval: document.getElementById('refreshInterval').value,
-            weatherAlerts: document.getElementById('weatherAlerts').checked,
-            dailyForecast: document.getElementById('dailyForecast').checked,
-            severeWeather: document.getElementById('severeWeather').checked,
-            cacheData: document.getElementById('cacheData').checked,
-            shareData: document.getElementById('shareData').checked
-        };
+    // Helper method to safely store data
+    safeStorageSet(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            console.log(`Successfully saved to localStorage: ${key}`);
+            return true;
+        } catch (error) {
+            console.error('Error saving to localStorage:', error);
+            try {
+                // Fallback to sessionStorage if localStorage is full
+                sessionStorage.setItem(key, JSON.stringify(value));
+                console.log('Saved to sessionStorage as fallback');
+                return true;
+            } catch (fallbackError) {
+                console.error('Error saving to sessionStorage:', fallbackError);
+                return false;
+            }
+        }
+    }
+    
+    // Helper method to safely retrieve data
+    safeStorageGet(key) {
+        try {
+            const data = localStorage.getItem(key);
+            if (data) return JSON.parse(data);
+        } catch (error) {
+            console.error('Error reading from localStorage:', error);
+            try {
+                const data = sessionStorage.getItem(key);
+                if (data) return JSON.parse(data);
+            } catch (fallbackError) {
+                console.error('Error reading from sessionStorage:', fallbackError);
+            }
+        }
+        return null;
+    }
+    
+    saveSettings(e) {
+        console.log('Saving settings...');
+        // Prevent default form submission
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         
-        localStorage.setItem('weatherPulseSettings', JSON.stringify(settings));
-        this.applySettings(settings);
-        this.closeSettings();
-        this.showNotification('Settings saved successfully!');
+        try {
+            // Get all form elements
+            const form = document.querySelector('#settingsModal form') || document.createElement('div');
+            const getValue = (id) => {
+                const el = document.getElementById(id);
+                if (!el) {
+                    console.warn(`Element with ID ${id} not found`);
+                    return null;
+                }
+                return el.type === 'checkbox' ? el.checked : el.value;
+            };
+            
+            // Build settings object
+            const settings = {
+                tempUnit: getValue('tempUnit') || 'celsius',
+                windUnit: getValue('windUnit') || 'kmh',
+                pressureUnit: getValue('pressureUnit') || 'hpa',
+                timeFormat: getValue('timeFormat') || '24h',
+                dateFormat: getValue('dateFormat') || 'dd/mm/yyyy',
+                theme: getValue('theme') || 'light',
+                animations: getValue('animations') || 'enabled',
+                defaultLocation: getValue('defaultLocation') || '',
+                language: getValue('language') || 'en',
+                refreshInterval: getValue('refreshInterval') || '5',
+                weatherAlerts: getValue('weatherAlerts') || false,
+                dailyForecast: getValue('dailyForecast') || false,
+                severeWeather: getValue('severeWeather') !== null ? getValue('severeWeather') : true,
+                cacheData: getValue('cacheData') !== null ? getValue('cacheData') : true,
+                shareData: getValue('shareData') || false,
+                autoRefresh: getValue('autoRefreshToggle') || false
+            };
+            
+            // Handle custom refresh interval
+            if (settings.refreshInterval === 'custom') {
+                const customInterval = getValue('customInterval');
+                if (customInterval && !isNaN(customInterval) && customInterval > 0) {
+                    settings.refreshInterval = customInterval;
+                } else {
+                    settings.refreshInterval = '5'; // Default to 5 minutes if custom is invalid
+                }
+            }
+            
+            console.log('Saving settings:', settings);
+            
+            // Save settings using our safe storage method
+            const success = this.safeStorageSet('weatherPulseSettings', settings);
+            
+            if (success) {
+                console.log('Settings saved successfully');
+                this.applySettings(settings);
+                this.closeSettings();
+                this.showNotification('Settings saved successfully!');
+                
+                // Verify settings were saved
+                const savedSettings = this.safeStorageGet('weatherPulseSettings');
+                console.log('Retrieved settings from storage:', savedSettings);
+            } else {
+                console.error('Failed to save settings to any storage');
+                this.showError('Failed to save settings. Your browser may be in private mode or storage is full.');
+            }
+            
+            // Restart auto-refresh if enabled
+            if (settings.autoRefresh) {
+                this.autoRefreshEnabled = true;
+                this.autoRefreshRate = parseInt(settings.refreshInterval, 10) || 5;
+                this.startAutoRefresh();
+            } else {
+                this.stopAutoRefresh();
+            }
+            
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            this.showError('Failed to save settings');
+        }
     }
 
     applySettings(settings) {
+        if (!settings) return;
+        
         // Apply theme
-        if (settings.theme === 'dark') {
+        if (settings.theme === 'dark' || (settings.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.body.classList.add('dark-theme');
         } else {
             document.body.classList.remove('dark-theme');
         }
         
-        // Apply animations
-        if (settings.animations === 'disabled') {
+        // Apply animations preference
+        if (settings.animations === 'disabled' || (settings.animations === 'reduced' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+            document.documentElement.style.setProperty('--animation-speed', '0s');
             document.body.classList.add('no-animations');
-        } else if (settings.animations === 'reduced') {
+        } else {
+            document.documentElement.style.setProperty('--animation-speed', '0.3s');
+            document.body.classList.remove('no-animations');
+        }
+        
+        if (settings.animations === 'reduced') {
             document.body.classList.add('reduced-motion');
         } else {
-            document.body.classList.remove('no-animations', 'reduced-motion');
+            document.body.classList.remove('reduced-motion');
         }
         
-        // Set up auto refresh
-        if (this.refreshTimer) {
-            clearInterval(this.refreshTimer);
+        // Apply units
+        this.currentUnit = settings.tempUnit === 'fahrenheit' ? 'imperial' : 'metric';
+        
+        // Update UI to reflect settings
+        if (this.currentCity) {
+            this.refreshWeatherData();
         }
         
-        const interval = parseInt(settings.refreshInterval);
+        // Update auto-refresh settings
+        if (settings.autoRefresh) {
+            this.autoRefreshEnabled = true;
+            this.autoRefreshRate = parseInt(settings.refreshInterval, 10) || 5;
+            this.startAutoRefresh();
+        } else {
+            this.autoRefreshEnabled = false;
+            this.stopAutoRefresh();
+        }
+        
+        // Set up auto refresh with the new settings
+        if (this.autoRefreshEnabled) {
+            const refreshMs = (this.autoRefreshRate || 5) * 60 * 1000; // Convert minutes to milliseconds
+            if (this.refreshTimer) {
+                clearInterval(this.refreshTimer);
+            }
+            this.refreshTimer = setInterval(() => this.refreshWeatherData(), refreshMs);
+        }
         if (interval > 0 && this.currentCoords) {
             this.refreshTimer = setInterval(() => {
                 this.getWeatherByCoords(
@@ -3289,12 +4520,71 @@ class WeatherDashboard {
 document.addEventListener('DOMContentLoaded', () => {
     const dashboard = new WeatherDashboard();
     
-    // Add settings event listeners
-    document.getElementById('closeSettings').addEventListener('click', () => dashboard.closeSettings());
-    document.getElementById('saveSettings').addEventListener('click', () => dashboard.saveSettings());
-    document.getElementById('resetSettings').addEventListener('click', () => dashboard.resetSettings());
-    document.getElementById('exportSettings').addEventListener('click', () => dashboard.exportSettings());
-    document.getElementById('importSettings').addEventListener('click', () => dashboard.importSettings());
+    // Debug: Log when DOM is loaded
+    console.log('DOM fully loaded, initializing event listeners...');
+    
+    // Direct button click handler for save button
+    const saveButton = document.getElementById('saveSettings');
+    if (saveButton) {
+        console.log('Save button found, attaching click handler...');
+        saveButton.addEventListener('click', function(e) {
+            console.log('Save button clicked!');
+            e.preventDefault();
+            e.stopPropagation();
+            dashboard.saveSettings(e);
+        });
+    } else {
+        console.error('Save button not found in the DOM!');
+    }
+    
+    // Enhanced close button handler
+    const closeButton = document.getElementById('closeSettings');
+    if (closeButton) {
+        // Remove any existing click handlers to prevent duplicates
+        const newCloseButton = closeButton.cloneNode(true);
+        closeButton.parentNode.replaceChild(newCloseButton, closeButton);
+        
+        // Add new click handler
+        newCloseButton.addEventListener('click', function(e) {
+            console.log('Close button clicked - direct handler');
+            e.preventDefault();
+            e.stopPropagation();
+            dashboard.closeSettings();
+        });
+        
+        // Also handle the icon click (in case that's what's being clicked)
+        const closeIcon = newCloseButton.querySelector('i.fa-times');
+        if (closeIcon) {
+            closeIcon.addEventListener('click', function(e) {
+                console.log('Close icon clicked');
+                e.preventDefault();
+                e.stopPropagation();
+                dashboard.closeSettings();
+            });
+        }
+        
+        console.log('Close button handler attached:', newCloseButton);
+    } else {
+        console.error('Close button not found in the DOM!');
+    }
+    
+    // Other settings buttons with null checks
+    const resetBtn = document.getElementById('resetSettings');
+    const exportBtn = document.getElementById('exportSettings');
+    const importBtn = document.getElementById('importSettings');
+    
+    resetBtn?.addEventListener('click', () => dashboard.resetSettings());
+    exportBtn?.addEventListener('click', () => dashboard.exportSettings());
+    importBtn?.addEventListener('click', () => dashboard.importSettings());
+    
+    // Debug: Log all settings-related elements
+    console.log('Settings elements:', {
+        saveButton: !!saveButton,
+        closeButton: !!closeButton,
+        resetButton: !!resetBtn,
+        exportButton: !!exportBtn,
+        importButton: !!importBtn
+    });
     
     // Close modal when clicking outside
     document.getElementById('settingsModal').addEventListener('click', (e) => {
